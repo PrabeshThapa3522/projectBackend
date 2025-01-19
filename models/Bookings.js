@@ -23,6 +23,8 @@ const bookingSchema = new mongoose.Schema({
 export default mongoose.model("Booking", bookingSchema);
 */
 
+
+
 import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema({
@@ -36,7 +38,7 @@ const bookingSchema = new mongoose.Schema({
     required: true,
   },
   seatNumber: {
-    type: Number,
+    type: [Number], // Changed to an array of numbers
     required: true,
   },
   user: {

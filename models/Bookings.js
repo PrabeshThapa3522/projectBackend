@@ -38,7 +38,7 @@ const bookingSchema = new mongoose.Schema({
     required: true,
   },
   seatNumber: {
-    type: [Number], // Changed to an array of numbers
+    type: [String], // Changed to an array of numbers
     required: true,
   },
   user: {

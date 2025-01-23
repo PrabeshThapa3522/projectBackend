@@ -223,6 +223,7 @@ import mongoose from "mongoose";
 import Bookings from "../models/Bookings.js";
 import Movie from "../models/Movie.js";
 import User from "../models/User.js";
+import crypto from "crypto";
 
 // Function to calculate total price for the booking
 const calculateTotalPrice = (seatNumber) => {
@@ -242,13 +243,40 @@ const generateEsewaUrl = (booking, totalPrice) => {
     su: `${process.env.FRONTEND_URL}/payment/callback?status=Success`,
     fu: `${process.env.FRONTEND_URL}/payment/callback?status=Failure`,
   };
+  const productCode = "EPAYTEST";
+  const secretKey = "8gBm/:&EnhH.1/q";
 
-  const esewaUrl = new URL("https://esewa.com.np/epay/main");
-  Object.keys(esewaData).forEach((key) =>
-    esewaUrl.searchParams.append(key, esewaData[key])
-  );
+  // Prepare the message for signature
+  const message = `total_amount=${esewaData.amt},transaction_uuid=${esewaData.pid},product_code=${productCode}`;
 
-  return esewaUrl.toString();
+  // Generate the signature using HMAC-SHA256
+  const signatureData = crypto
+    .createHmac("sha256", secretKey)
+    .update(message)
+    .digest("base64");
+
+  const formHtml = `    <html>
+      <body >
+        <form id="esewaForm" action="https://rc-epay.esewa.com.np/api/epay/main/v2/form" method="POST">
+          <input type="hidden" name="amount" value="${esewaData.amt}">
+          <input type="hidden" name="tax_amount" value="0">
+          <input type="hidden" name="total_amount" value="${esewaData.amt}">
+          <input type="hidden" name="transaction_uuid" value="${esewaData.pid}">
+          <input type="hidden" name="product_code" value="${productCode}">
+          <input type="hidden" name="product_service_charge" value="0">
+          <input type="hidden" name="product_delivery_charge" value="0">
+          <input type="hidden" name="success_url" value="https://esewa.com.np">
+          <input type="hidden" name="failure_url" value="https://google.com">
+          <input type="hidden" name="signed_field_names" value="total_amount,transaction_uuid,product_code">
+          <input type="hidden" name="signature" value="${signatureData}">
+        </form>
+        <script type="text/javascript">
+          document.getElementById("esewaForm").submit();
+        </script>
+      </body>
+    </html>`;
+
+  return formHtml;
 };
 
 export const newBooking = async (req, res, next) => {
@@ -267,7 +295,9 @@ export const newBooking = async (req, res, next) => {
     console.log("Existing Movie:", existingMovie);
     console.log("Existing User:", existingUser);
   } catch (err) {
-    return res.status(500).json({ message: "Error fetching Movie/User", error: err });
+    return res
+      .status(500)
+      .json({ message: "Error fetching Movie/User", error: err });
   }
 
   if (!existingMovie) {
@@ -289,33 +319,35 @@ export const newBooking = async (req, res, next) => {
     });
 
     const session = await mongoose.startSession();
-    session.startTransaction();
+    // session.startTransaction();
     existingUser.bookings.push(booking);
     existingMovie.bookings.push(booking);
     await existingUser.save({ session });
     await existingMovie.save({ session });
     await booking.save({ session });
-    await session.commitTransaction();
+    // await session.commitTransaction();
     console.log("Booking Created:", booking);
   } catch (err) {
     console.log("Booking Creation Error:", err);
-    return res.status(500).json({ message: "Error during booking creation", error: err });
+    return res
+      .status(500)
+      .json({ message: "Error during booking creation", error: err });
   }
 
   // Calculate Total Price
-  const totalPrice = calculateTotalPrice(seatNumber);
+  const totalPrice = calculateTotalPrice(seatNumber.length);
   console.log("Total Price:", totalPrice);
 
   // Generate eSewa URL
   const esewaUrl = generateEsewaUrl(booking, totalPrice);
-  console.log("Generated eSewa URL:", esewaUrl);
 
-  return res.status(201).json({
-    message: "Booking created successfully.",
-    paymentUrl: esewaUrl,
-  });
+  // return res.status(201).json({
+  //   message: "Booking created successfully.",
+  //   paymentUrl: esewaUrl,
+  // });
+  res.setHeader("Content-Type", "text/html");
+  res.send(esewaUrl);
 };
-
 
 export const getBookingById = async (req, res, next) => {
   const id = req.params.id;
@@ -355,4 +387,3 @@ export const deleteBooking = async (req, res, next) => {
 
   return res.status(200).json({ message: "Successfully Deleted" });
 };
-

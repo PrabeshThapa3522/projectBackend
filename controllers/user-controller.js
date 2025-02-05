@@ -408,16 +408,16 @@ export const login = async (req, res, next) => {
     return res.status(400).json({ message: "Incorrect Password" });
   }
 
-  // Verify OTP (2FA)
-  const verified = speakeasy.totp.verify({
-    secret: existingUser.twoFASecret, // Use the stored secret for OTP verification
-    encoding: "base32",
-    token: otp, // OTP entered by the user
-  });
+  // // Verify OTP (2FA)
+  // const verified = speakeasy.totp.verify({
+  //   secret: existingUser.twoFASecret, // Use the stored secret for OTP verification
+  //   encoding: "base32",
+  //   token: otp, // OTP entered by the user
+  // });
 
-  if (!verified) {
-    return res.status(400).json({ message: "Invalid OTP" });
-  }
+  // if (!verified) {
+  //   return res.status(400).json({ message: "Invalid OTP" });
+  // }
 
   return res.status(200).json({
     message: "Login Successful",

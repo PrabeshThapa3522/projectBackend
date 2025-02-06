@@ -92,8 +92,7 @@ export const getAllMovies = async (req, res, next) => {
   let recommendedMovies = [];
   try {
     movies = await Movie.find();
-
-    if (userId) {
+    if (userId && userId != null && userId != "null") {
       const bookings = await Booking.find({ user: userId }).populate("movie");
       if (bookings.length > 0) {
         const userGenres = bookings.map((booking) => booking.movie.description);
@@ -154,7 +153,13 @@ export const getAllMovies = async (req, res, next) => {
             likelyUserPreference: "0", // Set preference to 0 if no recommendations
           }));
         }
-      }
+      }else{
+							recommendedMovies = movies.map((movie) => ({
+        ...movie.toObject(),
+        recommendedScore: 0, // Set score to 0 if not recommended
+        likelyUserPreference: "0", // Set preference to 0 if no recommendations
+      }));
+						}
     } else {
       recommendedMovies = movies.map((movie) => ({
         ...movie.toObject(),
@@ -163,6 +168,7 @@ export const getAllMovies = async (req, res, next) => {
       }));
     }
   } catch (err) {
+			console.log(err)
     return res.status(500).json({ message: err.message });
   }
 
